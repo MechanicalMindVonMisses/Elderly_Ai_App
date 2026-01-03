@@ -204,6 +204,20 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
       );
       
       if (available) {
+        // Look for Turkish Locale
+        var systemLocales = await _speech.locales();
+        var selectedLocaleId = "tr_TR"; // Default fallback
+        
+        try {
+          var trLocale = systemLocales.firstWhere(
+            (locale) => locale.localeId.toLowerCase().contains("tr"),
+          );
+          selectedLocaleId = trLocale.localeId;
+          debugPrint("STT Selected Locale: $selectedLocaleId");
+        } catch (e) {
+          debugPrint("STT Turkish locale not found, using default: $e");
+        }
+
         setState(() => _isListening = true);
         _speech.listen(
           onResult: (result) {
@@ -215,7 +229,7 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
                _sendMessage(result.recognizedWords, isVoiceInput: true);
             }
           },
-          localeId: "tr_TR", // Force Turkish
+          localeId: selectedLocaleId, 
         );
       }
     } else {

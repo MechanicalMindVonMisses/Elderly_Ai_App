@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
 import '../services/ai_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_theme.dart';
@@ -17,6 +18,8 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
   final ScrollController _scrollController = ScrollController();
   
   late stt.SpeechToText _speech;
+  late FlutterTts _flutterTts;
+  
   bool _isListening = false;
   bool _isLoading = false;
 
@@ -24,11 +27,32 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
-    // No need to add greeting here, storage might have data.
-    // If empty, maybe add greeting? Let's check in build.
+    _initTts();
   }
 
-  Future<void> _sendMessage(String text) async {
+  Future<void> _initTts() async {
+    _flutterTts = FlutterTts();
+    await _flutterTts.setLanguage("tr-TR");
+    await _flutterTts.setSpeechRate(0.5); // Normal speaking rate
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setPitch(1.0);
+  }
+
+  Future<void> _speak(String text) async {
+    if (text.isNotEmpty) {
+      await _flutterTts.speak(text);
+    }
+  }
+
+  @override
+  void dispose() {
+    _flutterTts.stop();
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendMessage(String text, {bool isVoiceInput = false}) async {
     if (text.trim().isEmpty) return;
     
     final storage = Provider.of<StorageService>(context, listen: false);
@@ -147,6 +171,11 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
       storage.addChatMessage("ai", responseText);
     }
 
+    // Speak the response ONLY if voice input was used
+    if (isVoiceInput) {
+      await _speak(responseText);
+    }
+
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -183,10 +212,10 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
             });
             if (result.finalResult) {
                setState(() => _isListening = false);
-               _sendMessage(result.recognizedWords);
+               _sendMessage(result.recognizedWords, isVoiceInput: true);
             }
           },
-          localeId: "tr_TR", // Try Turkish
+          localeId: "tr_TR", // Force Turkish
         );
       }
     } else {
@@ -216,7 +245,10 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Sohbet Asistanı", style: Theme.of(context).textTheme.titleLarge),
-                IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                IconButton(icon: Icon(Icons.close), onPressed: () {
+                    _flutterTts.stop();
+                    Navigator.pop(context);
+                }),
               ],
             ),
           ),

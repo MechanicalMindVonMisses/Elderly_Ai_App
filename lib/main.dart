@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'utils/app_theme.dart';
 import 'services/storage_service.dart';
@@ -53,6 +54,16 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Can Dostum',
           debugShowCheckedModeBanner: false,
+          
+          // Localization Setup
+          supportedLocales: const [Locale('tr', 'TR')],
+          locale: const Locale('tr', 'TR'),
+          localizationsDelegates: const [
+             GlobalMaterialLocalizations.delegate,
+             GlobalWidgetsLocalizations.delegate,
+             GlobalCupertinoLocalizations.delegate,
+          ],
+
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,

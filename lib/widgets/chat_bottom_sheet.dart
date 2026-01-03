@@ -294,7 +294,11 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
                _sendMessage(result.recognizedWords, isVoiceInput: true);
             }
           },
-          localeId: selectedLocaleId, 
+          localeId: selectedLocaleId,
+          listenMode: stt.ListenMode.dictation,
+          onDevice: false, // Prefer server-side for better language handling if available
+          cancelOnError: true,
+          partialResults: true,
         );
       }
     } else {

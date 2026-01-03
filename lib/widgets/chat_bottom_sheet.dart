@@ -294,9 +294,10 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
                _sendMessage(result.recognizedWords, isVoiceInput: true);
             }
           },
+          
           localeId: selectedLocaleId,
           listenMode: stt.ListenMode.dictation,
-          onDevice: false, // Prefer server-side for better language handling if available
+          onDevice: true, // Force onDevice to use installed languages (User has Turkish installed)
           cancelOnError: true,
           partialResults: true,
         );

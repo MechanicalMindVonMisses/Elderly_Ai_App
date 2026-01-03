@@ -41,12 +41,28 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
     if (available) {
        var systemLocales = await _speech.locales();
        var trLocale;
+       
+       // 1. Try BCP-47 standard first (tr-TR)
        try {
          trLocale = systemLocales.firstWhere(
-           (locale) => locale.localeId.toLowerCase().contains("tr"),
+           (locale) => locale.localeId == "tr-TR",
          );
        } catch (e) {
-         // Not found
+          // 2. Try Android/Java standard (tr_TR)
+          try {
+             trLocale = systemLocales.firstWhere(
+               (locale) => locale.localeId == "tr_TR",
+             );
+          } catch (e) {
+             // 3. Try any Turkish
+             try {
+               trLocale = systemLocales.firstWhere(
+                 (locale) => locale.localeId.toLowerCase().startsWith("tr"),
+               );
+             } catch (e) {
+               // None found
+             }
+          }
        }
        
        if (mounted) {
@@ -54,7 +70,7 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
            if (trLocale != null) {
               _statusText = "Dil: ${trLocale.localeId} (Algılandı)";
            } else {
-              _statusText = "Dil: TR Bulunamadı! English kullanılacak.";
+              _statusText = "Dil: TR Bulunamadı! (Cihaz ayarlarını kontrol edin)";
            }
          });
        }
@@ -241,15 +257,26 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
       if (available) {
         // Redo lookup to be sure
         var systemLocales = await _speech.locales();
-        var selectedLocaleId = "tr_TR"; 
+        var selectedLocaleId = "tr-TR"; // Default BCP-47
         
+        var trLocale;
+        // 1. Try BCP-47 standard first (tr-TR)
         try {
-          var trLocale = systemLocales.firstWhere(
-            (locale) => locale.localeId.toLowerCase().contains("tr"),
-          );
-          selectedLocaleId = trLocale.localeId;
+           trLocale = systemLocales.firstWhere((l) => l.localeId == "tr-TR");
         } catch (e) {
-           debugPrint("Fallback to default locale");
+           // 2. Try Android/Java standard (tr_TR)
+           try {
+              trLocale = systemLocales.firstWhere((l) => l.localeId == "tr_TR");
+           } catch (e) {
+              // 3. Any TR
+              try {
+                trLocale = systemLocales.firstWhere((l) => l.localeId.toLowerCase().startsWith("tr"));
+              } catch (e) {}
+           }
+        }
+        
+        if (trLocale != null) {
+           selectedLocaleId = trLocale.localeId;
         }
 
         setState(() {

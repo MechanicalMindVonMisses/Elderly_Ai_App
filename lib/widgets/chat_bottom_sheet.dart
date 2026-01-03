@@ -34,8 +34,19 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
 
   Future<void> _initStt() async {
     bool available = await _speech.initialize(
-        onStatus: (status) => debugPrint('STT Status: $status'),
-        onError: (errorNotification) => debugPrint('STT Error: $errorNotification'),
+        onStatus: (status) { 
+           debugPrint('STT Status: $status');
+           // Update status if it's a helpful state
+           if (status == 'listening' || status == 'notListening' || status == 'done') {
+             // Don't overwrite the specific language message immediately or handle elsewhere
+           }
+        },
+        onError: (errorNotification) {
+           debugPrint('STT Error: $errorNotification');
+           if (mounted) {
+             setState(() => _statusText = "Hata: ${errorNotification.errorMsg} (${errorNotification.error})");
+           }
+        },
     );
     
     if (available) {
@@ -296,10 +307,10 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
           },
           
           localeId: selectedLocaleId,
-          listenMode: stt.ListenMode.dictation,
-          onDevice: true, // Force onDevice to use installed languages (User has Turkish installed)
+          listenMode: stt.ListenMode.search,
           cancelOnError: true,
           partialResults: true,
+          listenFor: const Duration(seconds: 30),
         );
       }
     } else {

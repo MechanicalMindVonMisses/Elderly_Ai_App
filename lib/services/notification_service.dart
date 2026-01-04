@@ -9,6 +9,12 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'dart:typed_data'; // Added for Int32List
 
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  // handle action
+  debugPrint('notificationTapBackground: ${notificationResponse.payload}');
+}
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -39,10 +45,6 @@ class NotificationService {
         debugPrint("[NotificationService] Notification Tapped. Payload: $payload");
         
         if (payload != null && navigatorKey != null) {
-          // Logic: 
-          // 1. If payload contains ':' it's likely a Time string (Meds) -> Go to /meds
-          // 2. If payload is 'test_meal' or looks like an ID (numeric) -> Go to /food
-          
           if (payload.contains(':')) {
              navigatorKey!.currentState?.pushNamed('/meds');
           } else {
@@ -50,6 +52,7 @@ class NotificationService {
           }
         }
       },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
      
     // Explicitly Request Permissions using permission_handler
@@ -114,7 +117,7 @@ class NotificationService {
             category: AndroidNotificationCategory.alarm,
             autoCancel: false, // Don't disappear on tap
             ongoing: true, // Can't be swiped away
-            // fullScreenIntent: true, // REMOVED: Might be causing "close" behavior if permission missing
+            // fullScreenIntent: true, // DISABLED: Suspected cause of background crash
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.alarmClock,
@@ -190,7 +193,7 @@ class NotificationService {
             category: AndroidNotificationCategory.alarm,
             autoCancel: false,
             ongoing: true,
-            fullScreenIntent: true, // Attempt full screen for visibility
+            // fullScreenIntent: true, // DISABLED: Suspected cause of background crash
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.alarmClock,

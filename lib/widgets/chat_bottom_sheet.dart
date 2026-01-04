@@ -44,7 +44,7 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
         onError: (errorNotification) {
            debugPrint('STT Error: $errorNotification');
            if (mounted) {
-             setState(() => _statusText = "Hata: ${errorNotification.errorMsg} (${errorNotification.error})");
+             setState(() => _statusText = "Hata: ${errorNotification.errorMsg}");
            }
         },
     );
@@ -268,26 +268,27 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
       if (available) {
         // Redo lookup to be sure
         var systemLocales = await _speech.locales();
-        var selectedLocaleId = "tr-TR"; // Default BCP-47
-        
-        var trLocale;
-        // 1. Try BCP-47 standard first (tr-TR)
+        var selectedLocaleId = "tr"; // User suggestion: "tr" works best for Android Intent
+
+        // Try to match specific variations if "tr" isn't explicitly there but others are
+        // But default to "tr" which is the safest shortcode
         try {
-           trLocale = systemLocales.firstWhere((l) => l.localeId == "tr-TR");
+           // If we find a specific one, we might use it, OR we stick to "tr" if it exists.
+           // Let's check if 'tr' exists in the list.
+           var exactTr = systemLocales.firstWhere((l) => l.localeId == "tr");
+           selectedLocaleId = exactTr.localeId;
         } catch (e) {
-           // 2. Try Android/Java standard (tr_TR)
+           // "tr" not found exactly. Try tr-TR or tr_TR
            try {
-              trLocale = systemLocales.firstWhere((l) => l.localeId == "tr_TR");
-           } catch (e) {
-              // 3. Any TR
-              try {
-                trLocale = systemLocales.firstWhere((l) => l.localeId.toLowerCase().startsWith("tr"));
-              } catch (e) {}
+              var trTR = systemLocales.firstWhere((l) => l.localeId == "tr-TR" || l.localeId == "tr_TR");
+              selectedLocaleId = trTR.localeId;
+           } catch (e2) {
+              // Fallback to startsWith as last resort
+               try {
+                var anyTr = systemLocales.firstWhere((l) => l.localeId.toLowerCase().startsWith("tr"));
+                selectedLocaleId = anyTr.localeId;
+              } catch (e3) {}
            }
-        }
-        
-        if (trLocale != null) {
-           selectedLocaleId = trLocale.localeId;
         }
 
         setState(() {

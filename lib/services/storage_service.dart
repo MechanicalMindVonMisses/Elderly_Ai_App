@@ -269,10 +269,15 @@ class StorageService extends ChangeNotifier {
     String? json = _prefs.getString('meds');
     if (json != null) {
       _meds = jsonDecode(json);
+      _sortMeds(); // Ensure sorted immediately
     }
   }
-  
 
+  void _sortMeds() {
+    _meds.sort((a, b) {
+      return (a['time'] as String).compareTo(b['time'] as String);
+    });
+  }
 
   Future<void> addMed(String name, String time) async {
     // Fix: Use microseconds + random to ensure uniqueness even in tight loops
@@ -283,6 +288,9 @@ class StorageService extends ChangeNotifier {
       'time': time,
       'taken': false
     });
+    
+    _sortMeds(); // Sort after adding
+    
     await _prefs.setString('meds', jsonEncode(_meds));
     
     // Grouped Notification Update

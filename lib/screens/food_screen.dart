@@ -48,28 +48,37 @@ class FoodScreen extends StatelessWidget {
             : Text("Saat: ${meal['time']}", style: TextStyle(fontSize: 18, color: Colors.grey)),
         
         // Checkbox to Silence Alarm / Mark Complete
-        trailing: Transform.scale(
-          scale: 1.5,
-          child: Checkbox(
-            value: isCompleted,
-            activeColor: Colors.green,
-            shape: CircleBorder(),
-            onChanged: (val) {
-               Provider.of<StorageService>(context, listen: false).updateMeal(
-                 meal['id'], 
-                 completed: val
-               );
-            },
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             IconButton(
+               icon: Icon(Icons.edit_calendar, color: Colors.blueGrey),
+               onPressed: () => _showFoodDialog(context, meal, isTimeEditOnly: true),
+             ),
+             Transform.scale(
+              scale: 1.5,
+              child: Checkbox(
+                value: isCompleted,
+                activeColor: Colors.green,
+                shape: CircleBorder(),
+                onChanged: (val) {
+                   Provider.of<StorageService>(context, listen: false).updateMeal(
+                     meal['id'], 
+                     completed: val
+                   );
+                },
+              ),
+            ),
+          ],
         ),
-        onTap: () => _showFoodDialog(context, meal),
+        onTap: () => _showFoodDialog(context, meal, isTimeEditOnly: false),
       ),
     );
   }
 
 
 
-  void _showFoodDialog(BuildContext context, Map<String, dynamic> meal) {
+  void _showFoodDialog(BuildContext context, Map<String, dynamic> meal, {bool isTimeEditOnly = false}) {
     final textController = TextEditingController(text: meal['content']);
     final timeController = TextEditingController(text: meal['time']);
     
@@ -83,25 +92,27 @@ class FoodScreen extends StatelessWidget {
           bool isLoading = false;
 
           return AlertDialog(
-            title: Text("${meal['name']} Düzenle"),
+            title: Text(isTimeEditOnly ? "${meal['name']} Saatini Değiştir" : "${meal['name']} Düzenle"),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Ne yediniz?", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: textController,
-                    decoration: InputDecoration(
-                      hintText: "Örn: Yumurta",
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(16),
+                  if (!isTimeEditOnly) ...[
+                    Text("Ne yediniz?", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: textController,
+                      decoration: InputDecoration(
+                        hintText: "Örn: Yumurta",
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.all(16),
+                      ),
+                      maxLines: 2,
                     ),
-                    maxLines: 2,
-                  ),
+                    const SizedBox(height: 20),
+                  ],
                   
-                  const SizedBox(height: 20),
                   Text("Saat", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   TextField(
@@ -139,7 +150,7 @@ class FoodScreen extends StatelessWidget {
                     },
                   ),
                   
-                  if (nutritionInfo != null && nutritionInfo!.isNotEmpty) ...[
+                  if (!isTimeEditOnly && nutritionInfo != null && nutritionInfo!.isNotEmpty) ...[
                      const SizedBox(height: 20),
                      Container(
                        padding: EdgeInsets.all(12),
@@ -171,28 +182,38 @@ class FoodScreen extends StatelessWidget {
                   onPressed: () async {
                      setState(() => isLoading = true);
                      
-                     String currentText = textController.text.trim();
-                     String newNutrition = nutritionInfo ?? "";
-                     
-                     // If text changed OR nutrition is missing, fetch new nutrition
-                     if (currentText.isNotEmpty && (currentText != meal['content'] || (nutritionInfo == null || nutritionInfo!.isEmpty))) {
-                        try {
-                           final ai = Provider.of<AIService>(context, listen: false);
-                           // Force nutrition lookup
-                           String prompt = "$currentText kaç kalori ve besin değeri nedir?";
-                           newNutrition = await ai.sendToLLM(prompt);
-                        } catch (e) {
-                          debugPrint("Nutrition fetch failed: $e");
-                        }
+                     if (isTimeEditOnly) {
+                       // Just update time and Reschedule
+                       Provider.of<StorageService>(context, listen: false).updateMeal(
+                         meal['id'], 
+                         time: timeController.text
+                         // Do NOT change completed or content
+                       );
+                     } else {
+                       // Log Food Logic
+                       String currentText = textController.text.trim();
+                       String newNutrition = nutritionInfo ?? "";
+                       
+                       // If text changed OR nutrition is missing, fetch new nutrition
+                       if (currentText.isNotEmpty && (currentText != meal['content'] || (nutritionInfo == null || nutritionInfo!.isEmpty))) {
+                          try {
+                             final ai = Provider.of<AIService>(context, listen: false);
+                             // Force nutrition lookup
+                             String prompt = "$currentText kaç kalori ve besin değeri nedir?";
+                             newNutrition = await ai.sendToLLM(prompt);
+                          } catch (e) {
+                            debugPrint("Nutrition fetch failed: $e");
+                          }
+                       }
+                    
+                       Provider.of<StorageService>(context, listen: false).updateMeal(
+                         meal['id'], 
+                         completed: true, 
+                         content: currentText,
+                         time: timeController.text,
+                         nutrition_notes: newNutrition
+                       );
                      }
-                  
-                     Provider.of<StorageService>(context, listen: false).updateMeal(
-                       meal['id'], 
-                       completed: true, 
-                       content: currentText,
-                       time: timeController.text,
-                       nutrition_notes: newNutrition
-                     );
                      
                      if (context.mounted) Navigator.pop(ctx);
                   },

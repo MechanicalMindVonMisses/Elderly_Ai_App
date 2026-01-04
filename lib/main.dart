@@ -15,6 +15,8 @@ import 'services/notification_service.dart';
 
 import 'package:intl/date_symbol_data_local.dart'; // Import this
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -22,7 +24,7 @@ void main() async {
   await initializeDateFormatting('tr_TR', null);
   
   // Initialize Notifications FIRST (Sets up Timezone)
-  await NotificationService().init();
+  await NotificationService().init(navigatorKey);
   
   // Initialize Storage (Uses Timezone for scheduling)
   final storage = StorageService();
@@ -53,6 +55,7 @@ class MyApp extends StatelessWidget {
       builder: (context, themeProvider, child) {
         return MaterialApp(
           title: 'Can Dostum',
+          navigatorKey: navigatorKey, // Inject Key
           debugShowCheckedModeBanner: false,
           
           // Localization Setup

@@ -147,13 +147,68 @@ class SettingsScreen extends StatelessWidget {
              icon: Icon(Icons.notifications_active),
              label: Text("Test Bildirimi Gönder"),
              onPressed: () async {
-               await NotificationService().showTestNotification();
+                await NotificationService().showTestNotification();
              },
              style: ElevatedButton.styleFrom(
                backgroundColor: Colors.amber, 
                foregroundColor: Colors.black,
              ),
           ),
+          
+          ElevatedButton.icon(
+             icon: Icon(Icons.restaurant),
+             label: Text("Test Yemek Alarmı (5sn)"),
+             onPressed: () async {
+               // Schedule for 5 seconds later
+               final now = DateTime.now().add(const Duration(seconds: 5));
+               final timeStr = "${now.hour}:${now.minute.toString().padLeft(2,'0')}"; // This might schedule for tomorrow if seconds matter, but logic uses HM.
+               // Actually logic uses exact HM match. If 12:00:05, and we pass 12:00, it might be weird.
+               // Let's force it to be "Now + 1 minute" to be safe for "Next Minute" tick if HH:MM.
+               // Better: Create a dedicated "test" method or just use current time + 1 min.
+               
+               // Quick Hack: Just call the service with a separate "Test" ID.
+               // But wait, the service calculates date from string HH:MM.
+               // So if currently 12:00:55, and we pass 12:01, it sets for today 12:01.
+               
+               final nextMin = DateTime.now().add(const Duration(minutes: 1));
+               final testTimeStr = "${nextMin.hour}:${nextMin.minute.toString().padLeft(2,'0')}";
+               
+               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Alarm $testTimeStr için kuruldu. Bekleyin...")));
+               
+               await NotificationService().scheduleMealNotification(
+                 'test_meal', 
+                 'TEST YEMEĞİ', 
+                 testTimeStr
+               );
+             },
+             style: ElevatedButton.styleFrom(
+               backgroundColor: Colors.orange, 
+               foregroundColor: Colors.white,
+             ),
+          ),
+          
+          ElevatedButton.icon(
+             icon: Icon(Icons.medication),
+             label: Text("Test İlaç Alarmı (5sn)"),
+             onPressed: () async {
+               // Schedule for 5 seconds later
+               final nextMin = DateTime.now().add(const Duration(minutes: 1));
+               final testTimeStr = "${nextMin.hour}:${nextMin.minute.toString().padLeft(2,'0')}";
+               
+               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("İlaç Alarmı $testTimeStr için kuruldu. Bekleyin...")));
+               
+               await NotificationService().scheduleMedicationGroup(
+                 testTimeStr, 
+                 ['Test İlacı A', 'Test İlacı B']
+               );
+             },
+             style: ElevatedButton.styleFrom(
+               backgroundColor: Colors.teal, 
+               foregroundColor: Colors.white,
+             ),
+          ),
+
+
           
           const SizedBox(height: 40),
           Center(child: Text("Sürüm: 2.0.0 (Flutter)", style: TextStyle(color: Colors.grey)))

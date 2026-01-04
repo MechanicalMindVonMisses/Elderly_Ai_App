@@ -16,7 +16,10 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  Future<void> init() async {
+  GlobalKey<NavigatorState>? navigatorKey;
+
+  Future<void> init(GlobalKey<NavigatorState> navKey) async {
+    navigatorKey = navKey;
     tz.initializeTimeZones();
     final String timeZoneName = await FlutterTimezone.getLocalTimezone();
     debugPrint("[NotificationService] Detected Timezone: $timeZoneName");
@@ -32,11 +35,19 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) async {
-        // Handle notification tap to Open App (Alarm continues until meds checked)
         final String? payload = notificationResponse.payload;
-        if (payload != null) {
-          debugPrint("[NotificationService] Notification Tapped. App Opened for Time: $payload");
-          // do NOT cancel here. StorageService will cancel when meds are ticked.
+        debugPrint("[NotificationService] Notification Tapped. Payload: $payload");
+        
+        if (payload != null && navigatorKey != null) {
+          // Logic: 
+          // 1. If payload contains ':' it's likely a Time string (Meds) -> Go to /meds
+          // 2. If payload is 'test_meal' or looks like an ID (numeric) -> Go to /food
+          
+          if (payload.contains(':')) {
+             navigatorKey!.currentState?.pushNamed('/meds');
+          } else {
+             navigatorKey!.currentState?.pushNamed('/food');
+          }
         }
       },
     );
@@ -159,12 +170,12 @@ class NotificationService {
     try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id.hashCode, // Use hash of Meal ID (e.g. "101")
-        'Yemek Vakti! 🍽️',
-        '$mealName zamanı geldi. Afiyet olsun!',
+        'Yemek Vakti: $mealName 🍽️', // Title now includes Meal Name
+        'Afiyet olsun! Yemeğini yemeyi unutma.',
         scheduledDate,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            'meal_alarm_channel_v1', // Separate channel for meals
+            'meal_alarm_channel_v2', // FRESH Channel ID to reset settings
             'Yemek Alarmları',
             channelDescription: 'Yemek vakti hatırlatıcıları',
             importance: Importance.max,
@@ -173,20 +184,22 @@ class NotificationService {
             largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
             playSound: true,
             enableVibration: true,
-            additionalFlags: Int32List.fromList(<int>[4]), // Insistent Alarm
+            // ALARM BEHAVIOR FLAGS (Matching Medication Alarm)
+            additionalFlags: Int32List.fromList(<int>[4]), // FLAG_INSISTENT
             audioAttributesUsage: AudioAttributesUsage.alarm,
             category: AndroidNotificationCategory.alarm,
             autoCancel: false,
             ongoing: true,
+            fullScreenIntent: true, // Attempt full screen for visibility
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time, // Daily Repeat
-        payload: id, // Pass Meal ID as payload to allow identifying what to silence
+        payload: id, // Pass Meal ID
       );
-      debugPrint("[NotificationService] Scheduled Meal ID: ${id.hashCode}");
+      debugPrint("[NotificationService] Scheduled Meal ID: ${id.hashCode} ($mealName)");
     } catch (e) {
       debugPrint("[NotificationService] ERROR Meal Schedule: $e");
     }
